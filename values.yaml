@@ -20,6 +20,8 @@ service:
   type: NodePort
   targetPort: 5000
 
+schedule:  "10 * * * *"
+
 cloudProvider: azure
 pullSecretName: "acr-registry"
 
@@ -30,11 +32,14 @@ rasteringestion:
   env_vars:
     CONF_FILE: "/layerSources/test_dir/configurations/qa-configuration.json"
     REPORTS_PATH: "/layerSources/automation/nightly/logs"
+    SSL_CERT_FILE: /usr/local/share/ca-certificates/ca.crt
+    REQUEST_CA_BUNDLE:
+    CURL_CA_BUNDLE:
+
 
 orchestrator:
   env_vars: {}
 
-schedule:  "2 7 * * *"
 
 rasterexport:
   enabled: true
@@ -60,10 +65,10 @@ rasterexport:
 colletlogs:
   image: 
     repository: acrarolibotnonprod.azurecr.io/automation/automation-collector
-    tag: v3.9
+    tag: v4.9.6
   command: "service4_command"
   env_vars:
-    slack_url: ""
+    slack_url: "https://hooks.slack.com/services/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"
     folder_collect_logs: '/layerSources/automation/nightly/logs'
     logger_path: "/layerSources/automation/nightly/logs"
     pg_credential: '{"pg_host": "10.0.4.4","pg_user": "postgres","pg_port": "5432","pg_pass": "Libot4allnonprod","pg_db": "automation","pg_schema": "public","pg_table": "DailyTestResult" }'
