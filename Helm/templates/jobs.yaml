@@ -1,0 +1,101 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.release.name }}-rasterexport
+  labels:
+    app: {{ .Values.release.name }}-rasterexport
+spec:
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.release.name }}-rasterexport
+    spec:
+      containers:
+      - name: rasterexport-container
+        image: {{ .Values.rasterexport.image.repository }}:{{ .Values.rasterexport.image.tag }}
+        env:
+        - name: RELEASE_NAME
+          value: {{ .Values.release.name | quote }}
+        {{- range $key, $value := .Values.rasterexport.env_vars }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        volumeMounts:
+        - name: ingestion-storage
+          mountPath: /layerSources
+        - name: ingestion-storage
+          mountPath: /app/tiles_outputs
+        ports:
+        - containerPort: {{ .Values.containerPort }}
+      restartPolicy: Never
+      volumes:
+      - name: ingestion-storage
+        persistentVolumeClaim:
+          claimName: {{ .Values.pvc.name }}
+
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-rasteringestion-job
+spec:
+  template:
+    spec:
+      serviceAccountName: automation
+      initContainers:
+      - name: wait-for-rasterexport
+        image: bitnami/kubectl:1.27
+        command:
+          - sh
+          - -c
+          - |
+            # Define variables
+            JOB_NAME="{{ .Release.Name }}-rasterexport"
+            NAMESPACE="qa" # Replace with your namespace if different
+            
+            # Function to check if the job exists
+            job_exists() {
+              kubectl get job "$JOB_NAME" -n "$NAMESPACE" &> /dev/null
+            }
+            
+            # Wait for the job to appear
+            echo "Waiting for job $JOB_NAME to appear..."
+            while true; do
+              if job_exists; then
+                echo "Found job: $JOB_NAME"
+                break
+              fi
+              sleep 5
+            done
+            
+            # Function to check if the job has completed
+            is_job_completed() {
+              kubectl get job "$JOB_NAME" -n "$NAMESPACE" -o jsonpath='{.status.succeeded}' | grep -q "1"
+            }
+            
+            # Wait for the job to complete
+            echo "Waiting for job $JOB_NAME to complete..."
+            while true; do
+              if is_job_completed; then
+                echo "Job $JOB_NAME has completed successfully."
+                break
+              fi
+              sleep 5
+            done
+      containers:
+      - name: rasteringestion-container
+        image: {{ .Values.rasteringestion.image.repository }}:{{ .Values.rasteringestion.image.tag }}
+        env:
+        {{- range $key, $value := .Values.rasteringestion.env_vars }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        volumeMounts:
+        - name: ingestion-storage
+          mountPath: /layerSources
+      restartPolicy: Never
+      volumes:
+      - name: ingestion-storage
+        persistentVolumeClaim:
+          claimName: {{ .Values.pvc.name }}
