@@ -25,7 +25,7 @@ This HELM file triggers the export ingestion and update tests sequentially in a 
 
 Once installed, the tests will run automatically one after the other. If one of the tests gets stuck, the subsequent tests will not run until the issue is resolved.
 
-You can monitor the results through the POD named `EXPORT-MERGER`.
+You can monitor the results through the POD named `raster-export-qa-exporter`.
 
 To view the logs:
 ```
