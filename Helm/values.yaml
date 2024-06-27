@@ -1,0 +1,85 @@
+# values.yaml
+
+apiVersion: v2
+name: automation-daily
+description: A Helm chart for deploying an application with a PVC in OpenShift
+version: 1.0.0
+
+environment: qa
+
+release:
+  name: automation-tests-job  # Add your release name here
+
+pvc:
+  name: internal-pvc-nfs
+
+containerPort: 8080
+service:
+  name: trigger-test
+  port: 80
+  type: NodePort
+  targetPort: 5000
+
+
+cloudProvider: azure
+pullSecretName: "acr-registry"
+
+rasteringestion:
+  image:
+    repository: acrarolibotnonprod.azurecr.io/e2e_tests
+    tag: 1.1.9
+  env_vars:
+    CONF_FILE: "/layerSources/test_dir/configurations/qa-configuration.json"
+    REPORTS_PATH: "/layerSources/automation/logs"
+    SSL_CERT_FILE: /usr/local/share/ca-certificates/ca.crt
+    REQUEST_CA_BUNDLE:
+    CURL_CA_BUNDLE:
+
+
+orchestrator:
+  env_vars: {}
+
+
+rasterexport:
+  enabled: true
+  image:
+    repository: acrarolibotnonprod.azurecr.io/automation/export-test-graph
+    tag:  3.3.0
+  env_vars:
+    url: "https://export-qa.mapcolonies.net"
+    certification: ""
+    domain: RASTER
+    token: "need to refactor"
+    record_id: '70303cfb-4faa-4812-a934-33834e0182d2'
+    trigger_task_create: "export-tasks"
+    required_resolution: 0.0000858306884765625
+    export_count: 1
+    foot_prints_file: "/layerSources/automation/test_dir/footprints_5kmr_ayosh.txt"
+    path_to_products: "/mnt/download"
+    image_name: "export_callback_graph.png"
+    logger_path: "/layerSources/automation/logs"
+    callback_url: "https://automation-tests-job-rasterexport-route-qa.apps.j1lk3njp.eastus.aroapp.io/webhook"
+    logger_name: "export-test-daily"
+    job_manager_url: 'https://common-job-manager-route-qa.apps.j1lk3njp.eastus.aroapp.io/'
+    path_download_server: '/app/tiles_outputs/gpkgs'
+
+
+replicaCount: 1
+subPathVolume: ingestion-source
+
+serviceAccount:
+  create: false
+  name: nightly-automation
+
+ingress:
+  enabled: false
+  host: ""
+  path: /
+  annotations: {}
+
+route:
+  enabled: true
+  annotations: {}
+
+autoscaling:
+  enabled: false
